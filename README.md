@@ -1,71 +1,119 @@
-# Goodfire Manifold Steering — Educational Demo
+# Manifold Steering — Isometry Reproduction and Boundary Analysis
 
-Two notebooks illustrating Goodfire's **activation space vs. behavior space** isometry claim, with steering demos and stress tests. Built as a hands-on companion to Max Ma's critique of the Manifold Steering paper.
+Replication of the core geometric claim in Goodfire's *Manifold Steering* (arXiv:2605.05115), with additional experiments probing isometry at semantic and register boundaries.
 
-## Starting Point: Max Ma's Critique
+## Background
 
-> [Single Token Geometry: A Critique of Manifold Steering](https://deepmanifold.substack.com/p/single-token-geometry-a-critique)
+> [Manifold Steering (arXiv:2605.05115)](https://arxiv.org/abs/2605.05115) · [Goodfire Research](https://www.goodfire.ai/research/manifold-steering)
+>
+> [Single Token Geometry: A Critique of Manifold Steering — Max Ma](https://deepmanifold.substack.com/p/single-token-geometry-a-critique)
 
-Max Ma argues that Goodfire's "manifold" language is mathematically loose: what they fit are spline curves through empirically observed concept centroids, not true manifolds derived from the model's architecture and boundary conditions. The approximate isometry they report is a local, smooth-region phenomenon — it breaks at concept boundaries ("cracks"), which the spline representation cannot express.
+Goodfire's central claim: pairwise distances between concept centroids in **activation space** and **behavior space** are approximately proportional — an empirical isometry. This is used to motivate activation steering as a geometrically grounded intervention.
 
-## Goodfire's Original Work
+## Method
 
-> [Manifold Steering (arXiv:2605.05115)](https://arxiv.org/abs/2605.05115)  
-> [Goodfire Research Page](https://www.goodfire.ai/research/manifold-steering)
+Follows Goodfire §2.1–2.3 exactly:
 
-Goodfire's finding: pairwise distances between concept centroids in **activation space** (final-layer hidden states, PCA-reduced) and **behavior space** (output distributions, Hellinger-embedded, PCA-reduced) are approximately proportional — an empirical approximate isometry. This is used to motivate activation steering as a geometrically grounded intervention.
+| Choice | This work | Goodfire |
+|--------|-----------|---------|
+| Model | Llama-3.1-8B (base) | Llama-3.1-8B |
+| Layer | 28 of 32 | 28 |
+| Prompts | "What day is k days after z? Answer:" | Same |
+| Activation space | Hidden states, 64D PCA | 64D PCA |
+| Behavior space | √p Hellinger embedding, 64D PCA | Same |
+| Distance metric | Cubic spline arc length | Same |
 
----
+## Results
 
-## Notebooks
+### Isometry Reproduction
 
-### `demo_gpt2.ipynb` — GPT-2 (start here)
+| Concept set | Chord r | Spline arc r | Goodfire (spline) |
+|-------------|---------|-------------|-------------------|
+| Days of week | 0.854 | **0.994** | 0.99 |
+| Months of year | — | **0.965** | 0.89 |
 
-**Hardware:** Any machine with 8 GB RAM. Runs on CPU. No GPU required.
-**Download:** ~500 MB (GPT-2, cached after first run)
-**Runtime:** ~5–8 minutes total on CPU
+Spline arc length is essential: chord distance alone gives r = 0.854 for days; the spline recovers r = 0.994, matching Goodfire's reported result. Layer 28 confirmed as the peak by a full layer sweep (layers 1–32).
 
-| Section | What it demonstrates |
-|---------|----------------------|
-| **1 — Synthetic** | What "approximate isometry" means geometrically (no model needed) |
-| **2 — Activation Space** | GPT-2 hidden states → PCA → day-of-week concept centroids |
-| **3 — Behavior Space** | Output distributions → √p Hellinger embedding → PCA → isometry scatter |
-| **4 — Steering Demo** | Hook-based activation steering; Mon→Tue direction; cross-cycle stress test |
+### Layer Sweep (Days, Chord r)
 
-**Key result:** Pearson r ≈ 0.42 — weak isometry, far below Goodfire's r > 0.9 on large models. This gap itself supports Max's critique: isometry is not universal.
+| Layer | 1 | 8 | 16 | 24 | **28** | 30 | 32 |
+|-------|---|---|----|----|--------|----|----|
+| r | 0.51 | 0.38 | 0.65 | 0.73 | **0.85** | 0.81 | 0.83 |
 
----
+### Boundary Analysis (Sections 5–6)
 
-### `demo_llama.ipynb` — Llama-3-8B-Instruct (full experiment)
+#### Section 5 — Cyclic Ordinal Concepts
 
-**Hardware:** 16 GB+ unified memory recommended (M1/M2/M3/M4 Pro or better). Tested on M4 Pro 48 GB.
-**Download:** ~16 GB (Llama-3-8B in float16, cached after first run)
-**Runtime:** ~15–25 minutes on M-series Mac with MPS
-**Prerequisites:** HuggingFace account + accepted [Llama-3 license](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct). Run `huggingface-cli login` before starting.
+Three experiments on whether isometry degrades at semantic boundaries within cyclic ordinal concept sets (weekdays, months).
 
-| Section | What it demonstrates |
-|---------|----------------------|
-| **1 — Synthetic** | Same isometry explainer as GPT-2 notebook |
-| **2 — Activation Space** | Llama-3 hidden states (4096D) → PCA → day-of-week centroids |
-| **3 — Behavior Space** | Hellinger embedding (128k vocab) → PCA → isometry scatter |
-| **4 — Steering Demo** | Mon→Tue steering via `model.model.norm` hook |
-| **5 — Crack Test** | **Refusal boundary test**: steers a helpful prompt toward refusal-adjacent concept space; measures Hellinger distance discontinuity vs. α — the real test of Max's "crack" hypothesis |
+**5.1 — Weekday/weekend boundary (local residuals)**
 
-**Expected outcome:** Potentially higher r than GPT-2, plus an empirical test of whether the helpful/refusal boundary in a safety-trained model creates a geometric discontinuity in behavior space.
+| Pair type | Mean residual | n |
+|-----------|--------------|---|
+| Weekday–weekday | 0.0455 | 10 |
+| Weekend–weekend | 0.0396 | 1 |
+| Cross-boundary (e.g. Fri–Sat) | 0.0331 | 10 |
 
----
+Cross-boundary residual ratio vs. within-weekday: **0.73** — not elevated. Isometry holds uniformly across the weekday/weekend boundary.
+
+**5.2 — Year boundary (months)**
+
+Dec–Jan boundary pairs vs. all other month pairs: residual ratio ≈ **1.04**. No significant elevation.
+
+**5.3 — Cross-concept steering (days → months)**
+
+Steering a day prompt along the days → months centroid direction (α 0–30, step 1):
+
+| α | Top token | P |
+|---|-----------|---|
+| 0 | Monday | 0.81 |
+| 10 | Monday | 0.32, February 0.06 |
+| 20 | February | 0.14, December 0.13 |
+| 30 | December | 0.16, February 0.13 |
+
+Behavior shifts smoothly from day to month vocabulary, then decelerates (ratio 0.35). No discontinuous jump.
+
+#### Section 6 — Language Register / Code-Switching
+
+Three concept clusters: English prose, Python code, French prose (15 prompts each). This targets a harder distributional boundary — code and natural language rarely interleave in training data.
+
+**6.1 — Cross-register isometry**
+
+| Pair | d\_activation | d\_behavior | d\_beh / d\_act |
+|------|--------------|------------|-----------------|
+| English ↔ Python | 20.1 | 0.544 | 0.027 |
+| English ↔ French | 25.2 | 0.718 | 0.029 |
+| Python ↔ French | 29.3 | 0.669 | 0.023 |
+
+Ratio coefficient of variation: **9.1%** — isometry holds across all three pairs, including the hard English/Python boundary. Notably, Python is closer to English than French in both spaces.
+
+**6.2 — Fine-grained steering: English → Python vs. English → French (α 0–40, step 0.5)**
+
+| Direction | Boundary | Peak / median | Total displacement |
+|-----------|----------|--------------|-------------------|
+| English → French | soft | **2.00×** | 1.116 |
+| English → Python | hard | 1.15× | 0.806 |
+
+Token trajectories reveal a qualitative difference:
+
+*English → French:* French function words enter top-20 at α = 15.5 and dominate by α = 30–40 (`la` 22%, `les` 9%, `le` 6%). The language switch completes.
+
+*English → Python:* Python keywords never enter top-20 at any α. Vocabulary drifts within English scientific register (`effect` → `rate` → `value` → `x`).
+
+**The steering direction toward Python code is not admissible.** Python production requires the entire forward pass to be in a code context — attention patterns, KV states, and MLP activations from all preceding layers process the English input before the layer-28 modification. A centroid shift at one layer cannot retroactively establish that context. By contrast, English and French share the same deep syntactic structure, so a layer-28 direction shift is sufficient to redirect the output vocabulary.
+
+This illustrates a case where activation space moves but behavior space does not follow — not as a Hellinger spike, but as a complete non-response of the behavior space to the steering direction.
 
 ## Setup
 
 ```bash
+# Requires HuggingFace account + accepted Llama-3 license
+huggingface-cli login
+
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-
-# GPT-2 version (no login needed)
-jupyter notebook demo_gpt2.ipynb
-
-# Llama-3 version (requires HuggingFace login)
-huggingface-cli login
 jupyter notebook demo_llama.ipynb
 ```
+
+**Hardware:** 16 GB+ unified memory (tested on M4 Pro 48 GB). Runtime: ~40–50 min on MPS.

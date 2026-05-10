@@ -21,8 +21,8 @@ Goodfire's finding: pairwise distances between concept centroids in **activation
 
 ### `demo_gpt2.ipynb` — GPT-2 (start here)
 
-**Hardware:** Any machine with 8 GB RAM. Runs on CPU. No GPU required.  
-**Download:** ~500 MB (GPT-2, cached after first run)  
+**Hardware:** Any machine with 8 GB RAM. Runs on CPU. No GPU required.
+**Download:** ~500 MB (GPT-2, cached after first run)
 **Runtime:** ~5–8 minutes total on CPU
 
 | Section | What it demonstrates |
@@ -38,9 +38,9 @@ Goodfire's finding: pairwise distances between concept centroids in **activation
 
 ### `demo_llama.ipynb` — Llama-3-8B-Instruct (full experiment)
 
-**Hardware:** 16 GB+ unified memory recommended (M1/M2/M3/M4 Pro or better). Tested on M4 Pro 48 GB.  
-**Download:** ~16 GB (Llama-3-8B in float16, cached after first run)  
-**Runtime:** ~15–25 minutes on M-series Mac with MPS  
+**Hardware:** 16 GB+ unified memory recommended (M1/M2/M3/M4 Pro or better). Tested on M4 Pro 48 GB.
+**Download:** ~16 GB (Llama-3-8B in float16, cached after first run)
+**Runtime:** ~15–25 minutes on M-series Mac with MPS
 **Prerequisites:** HuggingFace account + accepted [Llama-3 license](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct). Run `huggingface-cli login` before starting.
 
 | Section | What it demonstrates |
@@ -51,7 +51,7 @@ Goodfire's finding: pairwise distances between concept centroids in **activation
 | **4 — Steering Demo** | Mon→Tue steering via `model.model.norm` hook |
 | **5 — Crack Test** | **Refusal boundary test**: steers a helpful prompt toward refusal-adjacent concept space; measures Hellinger distance discontinuity vs. α — the real test of Max's "crack" hypothesis |
 
-**Key result:** Higher r than GPT-2 (expected), plus an empirical test of whether the helpful/refusal boundary in a safety-trained model creates a geometric discontinuity in behavior space.
+**Expected outcome:** Potentially higher r than GPT-2, plus an empirical test of whether the helpful/refusal boundary in a safety-trained model creates a geometric discontinuity in behavior space.
 
 ---
 
